@@ -2,13 +2,15 @@
 
 But how to handle ties?
 '''
-def get_loser(contest):
+def get_losers(contest):
     min_votes = None
     for option, votes in contest.items():
         if min_votes is None or len(votes) < min_votes:
-            loser = option
+            losers = [option]
             min_votes = len(votes)
-    return loser
+        elif len(votes) == min_votes:
+            losers.append(option)
+    return losers
 
 def cast_votes(contest, votes):
     for vote in votes:
@@ -36,7 +38,9 @@ def main():
         ["dwight"],
         ["dwight", "pam"],
         ["jim", "michael"],
-        ["pam"]
+        ["pam"],
+        ["michael", "pam"],
+        ["jim", "dwight"],
     ]
 
     # create dictionary from options
@@ -46,18 +50,25 @@ def main():
     
     # put votes in
     cast_votes(contest, votes)
-    print_contest(contest)
 
     # ranked choice algorithm
     while len(contest) > 1:
-        # drop lowest
-        loser = get_loser(contest)
-        print(f"dropping {loser}\n")
+        print_contest(contest)
+
+        # drop tied losers
+        losers = get_losers(contest)
+        votes = []
+        for loser in losers:
+            print(f"dropping {loser}")
+            votes += contest[loser]
+            del contest[loser]
 
         # distribute votes
-        cast_votes(contest, contest[loser])
-        del contest[loser]
-        print_contest(contest)
+        cast_votes(contest, votes)
+        print()
+
+    winner = get_losers(contest)[0]
+    print(f"{winner} wins!")
 
 if __name__ == "__main__":
     main()
