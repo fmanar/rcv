@@ -1,133 +1,63 @@
 '''Yay ranked choice voting!
 
+But how to handle ties?
 '''
+def get_loser(contest):
+    min_votes = None
+    for option, votes in contest.items():
+        if min_votes is None or len(votes) < min_votes:
+            loser = option
+            min_votes = len(votes)
+    return loser
 
-class Vote:
-    def __init__(self, name, rank_list, choice=0):
-        self.name = name
-        self.rank_list = rank_list
-        self.choice = choice
+def cast_votes(contest, votes):
+    for vote in votes:
+        option = None
+        while vote and option not in contest:
+            option = vote.pop(0)
+        if option in contest:
+            contest[option].append(vote)
 
-    def get_option_name(self):
-        if self.choice is None:
-            return None
-        else:
-            return self.rank_list[self.choice]
-
-    def increment_choice(self, option_names=None):
-        if self.choice is not None:
-            self.choice += 1
-        if self.choice == len(self.rank_list):
-            self.choice = None
-
-    def __repr__(self):
-        return f"Vote({self.name}, {self.rank_list}, {self.choice})"
-
-
-class Option:
-    def __init__(self, name, votes=None):
-        self.name = name
-        if votes is None:
-            self.votes = []
-        else:
-            self.votes = votes
-
-    def get_num_votes(self):
-        return(len(self.votes))
-
-    def __lt__(self, other):
-        return len(self.votes) < len(other.votes)
-
-    def __repr__(self):
-        return f"Option({self.name}, {self.votes})"
-
-class Contest:
-    '''Maintains options as a sorted list and dictionary.
-
-    Also tracks votes and ensures votes are only cast once.
-
-    '''
-    def __init__(self, options, votes=None):
-        self._options_list = options
-        self._options_dict = {}
-        for opt in options:
-            self._options_dict[opt.name] = opt
-        self._options_list.sort(reverse=True)
-        self._votes = {}
-        if votes:
-            self.assign_votes(votes)
-
-    def assign_votes(self, votes):
-        for vote in iter(votes):
-            key = vote.get_option_name()
-            if vote in self._votes:
-                raise ValueError("Vote already cast.")
-            elif key in self._options_dict:
-                self._votes[vote.name] = vote
-                self._options_dict[key].votes.append(vote)
-        self._options_list.sort(reverse=True)
-
-    def get_num_votes(self):
-        return len(self._votes)
-
-    def get_leader(self):
-        return self._options_list[0]
-
-    def pop(self):
-        '''Pop lowest option out of contest.
-        
-        '''
-        option = self._options_list.pop()
-        self._options_dict.pop(option.name)
-        for vote in option.votes:
-            self._votes.pop(vote.name)
-        return option
-
-    def __str__(self):
-        string = ""
-        for option in self._options_list:
-            string += f"{option.name}: {option.get_num_votes()}\n"
-        return string
-
-    def __repr__(self):
-        return f"Contest({self._options_list}, {self._votes})"
+def print_contest(contest):
+    for option, votes in contest.items():
+        print(f"{option}: {len(votes)} votes")
 
 def main():
-    options = [
-        Option("Jim"),
-        Option("Pam"),
-        Option("Michael"),
-        Option("Dwight"),
-    ]
+    options = ["jim", "pam", "michael", "dwight"]
     votes = [
-        Vote("Field", ["Dwight", "Pam", "Jim"]),
-        Vote("Aditi", ["Jim", "Pam"]),
-        Vote("Peter", ["Michael", "Dwight", "Jim", "Pam"]),
-        Vote("Natalie", ["Jim", "Michael", "Dwight"]),
-        Vote("Owen", ["Dwight", "Michael", "Pam", "Jim"]),
-        Vote("Haley", ["Pam"]),
-        Vote("Kristen", ["Pam", "Jim", "Dwight"]),
-        Vote("Sam", ["Michael", "Pam", "Jim"]),
-        Vote("Stacy", ["Dwight"]),
+        ["dwight", "pam", "jim"],
+        ["jim", "pam"],
+        ["michael", "dwight", "jim", "pam"],
+        ["jim", "michael", "dwight"],
+        ["dwight", "michael", "pam", "jim"],
+        ["pam"],
+        ["pam", "jim", "dwight"],
+        ["michael", "pam", "jim"],
+        ["dwight"],
+        ["dwight", "pam"],
+        ["jim", "michael"],
+        ["pam"]
     ]
 
-    contest = Contest(options, votes)
-    print(f"{contest}")
+    # create dictionary from options
+    contest = {}
+    for option in options:
+        contest[option] = []
+    
+    # put votes in
+    cast_votes(contest, votes)
+    print_contest(contest)
 
     # ranked choice algorithm
-    while contest.get_leader().get_num_votes() <= contest.get_num_votes() // 2:
+    while len(contest) > 1:
         # drop lowest
-        last = contest.pop()
+        loser = get_loser(contest)
+        print(f"dropping {loser}\n")
 
         # distribute votes
-        for vote in last.votes:
-            vote.increment_choice(contest)
-
-        contest.assign_votes(last.votes)
-        print(f"{contest}")
-
-
-
+        cast_votes(contest, contest[loser])
+        del contest[loser]
+        print_contest(contest)
 
 if __name__ == "__main__":
     main()
