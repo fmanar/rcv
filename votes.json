@@ -1,0 +1,20 @@
+{
+    "candidates": ["jim", "pam", "michael", "dwight"],
+    "votes": [
+        {"name": "a", "rank": ["dwight", "pam", "jim"]},
+        {"name": "b", "rank": ["jim", "pam"]},
+        {"name": "c", "rank": ["michael", "dwight", "jim", "pam"]},
+        {"name": "d", "rank": ["jim", "michael", "dwight"]},
+        {"name": "e", "rank": ["dwight", "michael", "pam", "jim"]},
+        {"name": "f", "rank": ["pam"]},
+        {"name": "g", "rank": ["pam", "jim", "dwight"]},
+        {"name": "h", "rank": ["michael", "pam", "jim"]},
+        {"name": "i", "rank": ["dwight"]},
+        {"name": "j", "rank": ["dwight", "pam"]},
+        {"name": "k", "rank": ["jim", "michael"]},
+        {"name": "l", "rank": ["pam"]},
+        {"name": "m", "rank": ["michael", "pam"]},
+        {"name": "n", "rank": ["jim", "dwight"]}
+    ]
+}
+   

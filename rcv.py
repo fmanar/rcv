@@ -4,7 +4,10 @@ But how to handle ties?
 
 Change votes to an object.
 '''
+import argparse
 from collections import OrderedDict
+import json
+import random
 
 class Vote:
     def __init__(self, name, rank):
@@ -32,12 +35,10 @@ class Contest:
     Dict value is list of vote. 
 
     '''
-    def __init__(self, candidates, verbose=False):
+    def __init__(self, candidates):
         self.pool = OrderedDict()
         for candidate in candidates:
             self.pool[candidate] = []
-            if verbose:
-                print(f"Candidate {candidate} created")
 
     def cast_votes(self, votes, verbose=False):
         '''Assign votes.
@@ -94,7 +95,7 @@ class Contest:
     def elect(self, votes, verbose=False):
         self.cast_votes(votes, verbose)
         if verbose:
-            print(f"\nTallies:\n{self}")
+            print("Tally:", self.__str__('\t'))
         while len(self.pool) > 1:
             losers = self.get_losers(verbose=verbose)
             if len(losers) == len(self.pool):
@@ -104,60 +105,75 @@ class Contest:
                 votes += self.pool.pop(loser)
             self.cast_votes(votes, verbose)
             if verbose:
-                print(f"\nTallies:\n{self}")
+                print("Tally:", self.__str__('\t'))
         winners = list(self.pool.keys())
-        if verbose and len(winners) > 1:
-            string = "Tie between"
-            for candidate in winners:
-                string += f" {candidate}" 
-            print(string)
-        elif verbose:
-            print(f"{winners[0]} wins!")
         return winners
         
-    def __str__(self):
+    def __str__(self, prefix=""):
         string = ""
         for candidate, votes in self.pool.items():
-            string += f"{candidate}: {len(votes)}\n"
+            string += f"\n{prefix}{candidate}: {len(votes)}"
         return string
+def anonimize_votes(votes):
+    random.shuffle(votes)
+    for i, vote in enumerate(votes):
+        vote.name = f"{i}"
 
 def main():
-    data = {
-        "candidates": ["jim", "pam", "michael", "dwight"],
-        "votes": [
-            {"name": "a", "rank": ["dwight", "pam", "jim"]},
-            {"name": "b", "rank": ["jim", "pam"]},
-            {"name": "c", "rank": ["michael", "dwight", "jim", "pam"]},
-            {"name": "d", "rank": ["jim", "michael", "dwight"]},
-            {"name": "e", "rank": ["dwight", "michael", "pam", "jim"]},
-            {"name": "f", "rank": ["pam"]},
-            {"name": "g", "rank": ["pam", "jim", "dwight"]},
-            {"name": "h", "rank": ["michael", "pam", "jim"]},
-            {"name": "i", "rank": ["dwight"]},
-            {"name": "j", "rank": ["dwight", "pam"]},
-            {"name": "k", "rank": ["jim", "michael"]},
-            {"name": "l", "rank": ["pam"]},
-            {"name": "m", "rank": ["michael", "pam"]},
-            {"name": "n", "rank": ["jim", "dwight"]},
-        ],
-    }
+    parser = argparse.ArgumentParser(
+        description="Run an election.",
+        )
+    parser.add_argument("file", 
+        help="input json file",
+        )
+    parser.add_argument("-a", "--anon",
+        help="anonimize vote names",
+        action="store_true"
+        )
+    parser.add_argument("-v", "--verbose",
+        help="print verbose output",
+        action="store_true",
+        )
+    args = parser.parse_args()
+
+    with open(args.file) as f:
+        data = json.load(f)
 
     # contest and votes list
-    contest = Contest(data["candidates"], verbose=True)
+    contest = Contest(data["candidates"])
+    if args.verbose:
+        print("Candidates:")
+        for candidate in contest.pool.keys():
+            print(f"\t{candidate}")
 
-    # extract and cast votes
+    # extract votes
     votes = []
     for vote_dict in data["votes"]:
         votes.append(Vote(**vote_dict))
-    contest.elect(votes, verbose=True)
+    if args.anon:
+        anonimize_votes(votes)
+    if args.verbose:
+        print("Votes:")
+        for vote in votes:
+            print(f"\t{vote.name}: {vote.rank}")
+
+    # run the election
+    winners = contest.elect(votes, verbose=args.verbose)
+    if len(winners) > 1:
+        string = "Tie between candidates"
+        for candidate in winners:
+            string += f" {candidate}" 
+        print(string)
+    else:
+        print(f"Candidate {winners[0]} wins!")
 
     # print out what candidate each person got
-    print("\nVote final casting:")
-    for vote in votes:
-        if vote.index is None:
-            print(f"Vote {vote.name} was exhausted")
-        else:
-            print(f"Vote {vote.name} got index {vote.index}")
+    if args.verbose:
+        for vote in votes:
+            if vote.index is None:
+                print(f"Vote {vote.name} was exhausted")
+            else:
+                print(f"Vote {vote.name} got index {vote.index}")
 
 if __name__ == "__main__":
     main()
