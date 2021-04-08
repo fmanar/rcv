@@ -12,15 +12,15 @@ class Vote:
         self.rank = rank
         self.index = 0
 
-    def get_choice(self):
-        '''Get choice (candidate/contest pool key).'''
+    def get_candidate(self):
+        '''Get candidate (candidate/contest pool key).'''
         if self.index is None:
             return None
         else:
             return self.rank[self.index]
     
-    def incr_choice(self):
-        '''Move to the next choice.'''
+    def incr_candidate(self):
+        '''Move to the next candidate.'''
         self.index += 1
         if self.index == len(self.rank):
             self.index = None
@@ -32,16 +32,18 @@ class Contest:
     Dict value is list of vote. 
 
     '''
-    def __init__(self, candidates):
+    def __init__(self, candidates, verbose=False):
         self.pool = OrderedDict()
-        for key in candidates:
-            self.pool[key] = []
+        for candidate in candidates:
+            self.pool[candidate] = []
+            if verbose:
+                print(f"Candidate {candidate} created")
 
     def cast_votes(self, votes, verbose=False):
         '''Assign votes.
 
-        For each vote, if the current choice isn't in the pool, increments
-        the vote until the choice is in the pool or the vote is exhausted.
+        For each vote, if the current candidate isn't in the pool, increments
+        the vote until the candidate is in the pool or the vote is exhausted.
         Finally, sort pool.
 
         Args:
@@ -50,63 +52,68 @@ class Contest:
         '''
         # process each vote
         for vote in votes:
-            choice = vote.get_choice()
-            # make sure choice is in pool
-            while choice and choice not in self.pool:
-                vote.incr_choice()
-                choice = vote.get_choice()
+            candidate = vote.get_candidate()
+            # make sure candidate is in pool
+            while candidate and candidate not in self.pool:
+                vote.incr_candidate()
+                candidate = vote.get_candidate()
             # add vote to this candidates list
-            if choice:
+            if candidate:
                 if verbose:
-                    print(f"Vote {vote.name} cast on {choice}")
-                self.pool[choice].append(vote)
+                    print(f"Vote {vote.name} cast on {candidate}")
+                self.pool[candidate].append(vote)
             elif verbose:
                 print(f"Vote {vote.name} exhausted")
         # sort pool
         self.pool = OrderedDict(sorted(self.pool.items(), key=lambda item: len(item[1]), reverse=True))
 
-    def drop_losers(self, verbose=False):
-        '''Remove lowest candidates.
+    def get_losers(self, verbose=False):
+        '''Return lowest candidates.
 
-        Probably one lowest candidate, but on tie drop everyone.
+        Probably one lowest candidate, but on tie return everyone in tie.
 
         Args:
-            verbose (bool): print out who is being dropped
+            verbose (bool): print out losers
 
         Returns:
-            (list of Vote): votes of the dropped candidates
+            (list of str): loser candidates (keys in self.pool)
 
         '''
-        dropped_candidates = []
+        losers = []
         min_votes = None
         for candidate, votes in reversed(self.pool.items()):
             if min_votes is None:
                 min_votes = len(votes)
             elif len(votes) > min_votes:
                 break
-            dropped_candidates.append(candidate)
-        dropped_votes = []
-        for candidate in dropped_candidates:
-            dropped_votes += self.pool[candidate]
-            del self.pool[candidate]
+            losers.append(candidate)
             if verbose:
-                print(f"Eliminating {candidate}")
-        return dropped_votes
+                print(f"Candidate {candidate} loses")
+        return losers
 
     def elect(self, votes, verbose=False):
         self.cast_votes(votes, verbose)
         if verbose:
-            print(f"{self}")
+            print(f"\nTallies:\n{self}")
         while len(self.pool) > 1:
-            votes = self.drop_losers(verbose=verbose)
-
+            losers = self.get_losers(verbose=verbose)
+            if len(losers) == len(self.pool):
+                break
+            votes = []
+            for loser in losers:
+                votes += self.pool.pop(loser)
             self.cast_votes(votes, verbose)
             if verbose:
-                print(f"{self}")
-        winner = next(iter(self.pool))
-        if verbose:
-            print(f"{winner} wins!")
-        return winner
+                print(f"\nTallies:\n{self}")
+        winners = list(self.pool.keys())
+        if verbose and len(winners) > 1:
+            string = "Tie between"
+            for candidate in winners:
+                string += f" {candidate}" 
+            print(string)
+        elif verbose:
+            print(f"{winners[0]} wins!")
+        return winners
         
     def __str__(self):
         string = ""
@@ -136,7 +143,7 @@ def main():
     }
 
     # contest and votes list
-    contest = Contest(data["candidates"])
+    contest = Contest(data["candidates"], verbose=True)
 
     # extract and cast votes
     votes = []
@@ -144,13 +151,13 @@ def main():
         votes.append(Vote(**vote_dict))
     contest.elect(votes, verbose=True)
 
-    # print out what choice each person got
+    # print out what candidate each person got
     print("\nVote final casting:")
     for vote in votes:
         if vote.index is None:
-            print(f"vote {vote.name} was exhausted")
+            print(f"Vote {vote.name} was exhausted")
         else:
-            print(f"vote {vote.name} got choice {vote.index}")
+            print(f"Vote {vote.name} got index {vote.index}")
 
 if __name__ == "__main__":
     main()
