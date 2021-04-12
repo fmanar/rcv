@@ -114,7 +114,9 @@ class Contest:
         for candidate, votes in self.pool.items():
             string += f"\n{prefix}{candidate}: {len(votes)}"
         return string
+
 def anonimize_votes(votes):
+    '''Make votes anonymous.'''
     random.shuffle(votes)
     for i, vote in enumerate(votes):
         vote.name = f"{i}"
@@ -139,7 +141,7 @@ def main():
     with open(args.file) as f:
         data = json.load(f)
 
-    # contest and votes list
+    # extract candidates
     contest = Contest(data["candidates"])
     if args.verbose:
         print("Candidates:")
